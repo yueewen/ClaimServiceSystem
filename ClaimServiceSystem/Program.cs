@@ -15,6 +15,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ClaimsDbContext>(options =>
     options.UseSqlite("Data Source=claims-lifecycle.db"));
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? ["http://localhost:4200", "http://localhost:4201"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "ClaimServiceSystem-Local-Dev-Secret-Key-Change-Me-123456789";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ClaimServiceSystem";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "ClaimServiceSystem.Client";
@@ -63,6 +78,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseMiddleware<ClaimantContextMiddleware>();
 app.UseAuthorization();
